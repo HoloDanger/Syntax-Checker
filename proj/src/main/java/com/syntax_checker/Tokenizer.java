@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 public class Tokenizer {
     private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|double|do|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
-    private static final String OPERATORS = "\\+|\\-|\\*|\\/|\\=|\\<|\\>|\\!|\\&|\\||\\^|\\%|\\~|\\?|\\(|\\)|\\{|\\}|\\[|\\]|\\.";
+    private static final String OPERATORS = "[+\\-*/=<>!&\\|\\^%~\\?\\(\\)\\{\\}\\[\\]\\.]";
     private static final String IO_CLASS = "System|Scanner|BufferedReader|PrintWriter";
     private static final String IO_METHOD = "out|in|err|println|readLine|nextInt|nextDouble";
     private static final String IDENTIFIER = "[a-zA-Z_$][a-zA-Z0-9_$]*";
@@ -16,11 +16,11 @@ public class Tokenizer {
     private static final String FLOAT_LITERAL = "[0-9]+\\.[0-9]+";
     private static final String BOOLEAN_LITERAL = "true|false";
     private static final String WHITESPACE = "\\s+";
-    private static final String SEMICOlON = "\\;";
+    private static final String SEMICOLON = "\\;";
 
     public enum TokenType {
         KEYWORD, IO_CLASS, IO_METHOD, IDENTIFIER, OPERATOR, STRING_LITERAL, INTEGER_LITERAL, FLOAT_LITERAL,
-        BOOLEAN_LITERAL, WHITESPACE, SEMICOlON
+        BOOLEAN_LITERAL, WHITESPACE, SEMICOLON
     }
 
     public static class Token {
@@ -46,7 +46,7 @@ public class Tokenizer {
         List<Token> tokens = new ArrayList<>();
         String patternString = "(" + KEYWORDS + ")|(" + IO_CLASS + ")|(" + IO_METHOD + ")|(" + BOOLEAN_LITERAL + ")|("
                 + IDENTIFIER + ")|(" + OPERATORS + ")|(" + STRING_LITERAL + ")|("
-                + FLOAT_LITERAL + ")|(" + INTEGER_LITERAL + ")|(" + WHITESPACE + ")|(" + SEMICOlON + ")|(.)";
+                + FLOAT_LITERAL + ")|(" + INTEGER_LITERAL + ")|(" + WHITESPACE + ")|(" + SEMICOLON + ")|(.)";
         Pattern pattern = Pattern.compile(patternString);
         Matcher matcher = pattern.matcher(code);
 
@@ -79,7 +79,7 @@ public class Tokenizer {
                 // Ignore whitespace
                 continue;
             } else if (matcher.group(11) != null) {
-                tokenType = TokenType.SEMICOlON;
+                tokenType = TokenType.SEMICOLON;
             } else if (matcher.group(12) != null) {
                 // Handle invalid characters
                 throw new LexicalException("Invalid character: " + tokenValue + "'", line, column);
@@ -89,7 +89,7 @@ public class Tokenizer {
                 tokens.add(new Token(tokenType, tokenValue, line, column));
             }
 
-            // Update column cont
+            // Update column count
             column += tokenValue.length();
             if (tokenValue.contains("\n")) {
                 line++;
