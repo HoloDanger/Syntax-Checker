@@ -6,17 +6,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Tokenizer {
-    private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
-    private static final String OPERATORS = "\\+|\\-|\\*|\\/|\\=|\\<|\\>|\\!|\\&|\\||\\^|\\%|\\~|\\?|\\(|\\)|\\;|\\{|\\}|\\[|\\]|\\.";
+    private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|double|do|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
+    private static final String OPERATORS = "\\+|\\-|\\*|\\/|\\=|\\<|\\>|\\!|\\&|\\||\\^|\\%|\\~|\\?|\\(|\\)|\\{|\\}|\\[|\\]|\\.";
     private static final String IO_CLASS = "System|Scanner|BufferedReader|PrintWriter";
     private static final String IO_METHOD = "out|in|err|println|readLine|nextInt|nextDouble";
     private static final String IDENTIFIER = "[a-zA-Z_$][a-zA-Z0-9_$]*";
     private static final String STRING_LITERAL = "\"[^\"]*\"";
     private static final String INTEGER_LITERAL = "[0-9]+";
+    private static final String FLOAT_LITERAL = "[0-9]+\\.[0-9]+";
+    private static final String BOOLEAN_LITERAL = "true|false";
     private static final String WHITESPACE = "\\s+";
+    private static final String SEMICOlON = "\\;";
 
     public enum TokenType {
-        KEYWORD, IO_CLASS, IO_METHOD, IDENTIFIER, OPERATOR, STRING_LITERAL, INTEGER_LITERAL, WHITESPACE
+        KEYWORD, IO_CLASS, IO_METHOD, IDENTIFIER, OPERATOR, STRING_LITERAL, INTEGER_LITERAL, FLOAT_LITERAL,
+        BOOLEAN_LITERAL, WHITESPACE, SEMICOlON
     }
 
     public static class Token {
@@ -40,9 +44,9 @@ public class Tokenizer {
 
     public List<Token> tokenize(String code) {
         List<Token> tokens = new ArrayList<>();
-        String patternString = "(" + KEYWORDS + ")|(" + IO_CLASS + ")|(" + IO_METHOD + ")|(" + IDENTIFIER + ")|("
-                + OPERATORS + ")|(" + STRING_LITERAL + ")|("
-                + INTEGER_LITERAL + ")|(" + WHITESPACE + ")|(.)";
+        String patternString = "(" + KEYWORDS + ")|(" + IO_CLASS + ")|(" + IO_METHOD + ")|(" + BOOLEAN_LITERAL + ")|("
+                + IDENTIFIER + ")|(" + OPERATORS + ")|(" + STRING_LITERAL + ")|("
+                + FLOAT_LITERAL + ")|(" + INTEGER_LITERAL + ")|(" + WHITESPACE + ")|(" + SEMICOlON + ")|(.)";
         Pattern pattern = Pattern.compile(patternString);
         Matcher matcher = pattern.matcher(code);
 
@@ -60,19 +64,25 @@ public class Tokenizer {
             } else if (matcher.group(3) != null) {
                 tokenType = TokenType.IO_METHOD;
             } else if (matcher.group(4) != null) {
-                tokenType = TokenType.IDENTIFIER;
+                tokenType = TokenType.BOOLEAN_LITERAL;
             } else if (matcher.group(5) != null) {
-                tokenType = TokenType.OPERATOR;
+                tokenType = TokenType.IDENTIFIER;
             } else if (matcher.group(6) != null) {
-                tokenType = TokenType.STRING_LITERAL;
+                tokenType = TokenType.OPERATOR;
             } else if (matcher.group(7) != null) {
-                tokenType = TokenType.INTEGER_LITERAL;
+                tokenType = TokenType.STRING_LITERAL;
             } else if (matcher.group(8) != null) {
+                tokenType = TokenType.FLOAT_LITERAL;
+            } else if (matcher.group(9) != null) {
+                tokenType = TokenType.INTEGER_LITERAL;
+            } else if (matcher.group(10) != null) {
                 // Ignore whitespace
                 continue;
-            } else if (matcher.group(9) != null) {
+            } else if (matcher.group(11) != null) {
+                tokenType = TokenType.SEMICOlON;
+            } else if (matcher.group(12) != null) {
                 // Handle invalid characters
-                throw new LexicalException("Invalid character: " + tokenValue, line, column);
+                throw new LexicalException("Invalid character: " + tokenValue + "'", line, column);
             }
 
             if (tokenType != null) {
@@ -103,7 +113,7 @@ public class Tokenizer {
     }
 
     public static void main(String[] args) {
-        String code = "Scanner variable = new Scanner(System.in);";
+        String code = "boolean isTrue = true;";
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);
 
