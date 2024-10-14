@@ -73,12 +73,12 @@ public class Tokenizer {
                 continue;
             }
 
-            // Handle unknown tokens gracefully
-            if (tokenType == null) {
+            // Handle unknown tokens
+            if (tokenType == TokenType.UNKNOWN || tokenValue.contains("#")) {
                 throw new LexicalException("Unrecognized token '" + tokenValue + "'", lineNumber, columnNumber);
             }
-            tokens.add(new Token(tokenType, tokenValue, lineNumber, columnNumber));
 
+            tokens.add(new Token(tokenType, tokenValue, lineNumber, columnNumber));
             // Update column count
             columnNumber += tokenValue.length();
         }
