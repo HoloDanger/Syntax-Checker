@@ -261,19 +261,15 @@ public class Parser {
 
     private String reconstructStatement(int startIndex, int endIndex) {
         StringBuilder statement = new StringBuilder();
-        boolean firstToken = true;
+        statement.append("Parsed statement:\n");
 
         for (int i = startIndex; i < endIndex; i++) {
             Tokenizer.Token token = tokens.get(i);
-            if (!firstToken) {
-                statement.append(", ");
-            }
-            firstToken = false;
-
-            // Append the token type and value in the specified format
-            statement.append(token.type.name() + ": \"" + token.value + "\"");
+            statement.append("  Token Type: ").append(token.type.name())
+                    .append(", Value: \"").append(token.value).append("\"\n");
         }
-        return "[" + statement.toString() + "]";
+
+        return statement.toString();
     }
 
     // Helper function to handle optional whitespace
@@ -294,8 +290,8 @@ public class Parser {
         try {
             while (parser.getCurrentToken() != null) {
                 String parsedStatement = parser.parseStatement();
-                System.out.println("Parsed statement: " + parsedStatement);
-                System.out.println("Parsing successful!");
+                System.out.println(parsedStatement);
+                System.out.println("Parsing successful!\n");
             }
         } catch (SyntaxErrorException e) {
             System.err.println(e.getMessage());
