@@ -302,10 +302,3 @@ public class Parser {
         }
     }
 }
-
-// Exception class to handle syntax errors
-class SyntaxErrorException extends Exception {
-    public SyntaxErrorException(String message) {
-        super(message);
-    }
-}
