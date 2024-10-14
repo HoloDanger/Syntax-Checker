@@ -43,9 +43,10 @@ public class Tokenizer {
 
         @Override
         public String toString() {
-            return "Token{" + "type=" + type + ", value ='" + value + '\'' + ", line=" + line + ", column=" + column
-                    + '}';
+            return String.format("Type: %-20s | Value: %-15s | Line: %-3d | Column: %-3d",
+                    type, value, line, column);
         }
+
     }
 
     public List<Token> tokenize(String code) {
@@ -108,17 +109,22 @@ public class Tokenizer {
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);
 
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        System.out.println("Tokens for the provided code:\n");
+        printTokens(tokens);
 
-        String testCode = "Scanner sc = new Scanner(System.in);\n" +
+        String testCode = "Scanner scanner = new Scanner(System.in);\n" +
                 "int num = sc.nextInt();\n" +
                 "System.out.println(\"Number: \" + num);";
         System.out.println("\nTesting additional code:\n");
         List<Token> additionalTokens = tokenizer.tokenize(testCode);
-        for (Token token : additionalTokens) {
+        printTokens(additionalTokens);
+    }
+
+    private static void printTokens(List<Token> tokens) {
+        System.out.println("------------------------------------------------------");
+        for (Token token : tokens) {
             System.out.println(token);
         }
+        System.out.println("------------------------------------------------------");
     }
 }
