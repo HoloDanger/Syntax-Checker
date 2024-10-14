@@ -34,17 +34,17 @@ public class Parser {
     }
 
     // Parsing methods for output statements
-    public void parseOutputStatement() throws SyntaxErrorException {
+    public String parseOutputStatement() throws SyntaxErrorException {
+        int startIndex = currentTokenIndex;
         optionalWhitespace();
         if (matchMultiWord("System.out.print", true)) {
-            // Consume tokens if "System.out.print is found"
             parsePrintStatement();
         } else if (matchMultiWord("System.out.println", true)) {
-            // Consume tokens if "System.out.println is found"
             parsePrintlnStatement();
         } else {
             error("Expected 'System.out.print' or 'System.out.println'");
         }
+        return reconstructStatement(startIndex, currentTokenIndex);
     }
 
     private void parsePrintStatement() throws SyntaxErrorException {
@@ -141,13 +141,86 @@ public class Parser {
     }
 
     // Parsing methods for input statements
-    public void parseInputStatement() throws SyntaxErrorException {
+    public String parseInputStatement() throws SyntaxErrorException {
+        int startIndex = currentTokenIndex;
         optionalWhitespace();
-        if (match("Scanner") && parseVariable() && match("=") && match("new") && match("Scanner") && match("(")
-                && matchMultiWord("System.in", true) && match(")") && match(";")) {
+
+        if (parseScanner() || parseBufferedReader()) {
             // Successfully parsed input statement
         } else {
             error("Invalid input statement");
+        }
+        return reconstructStatement(startIndex, currentTokenIndex);
+    }
+
+    private boolean parseScanner() throws SyntaxErrorException {
+        int backtrackIndex = currentTokenIndex;
+
+        if (match("Scanner") &&
+                optionalWhitespace() &&
+                parseVariable() &&
+                optionalWhitespace() &&
+                match("=") &&
+                optionalWhitespace() &&
+                match("new") &&
+                optionalWhitespace() &&
+                match("Scanner") &&
+                optionalWhitespace() &&
+                match("(") &&
+                optionalWhitespace() &&
+                (matchMultiWord("System.in", true) || parseVariable()) &&
+                optionalWhitespace() &&
+                match(")") &&
+                optionalWhitespace() &&
+                match(";")) {
+            return true;
+        }
+
+        currentTokenIndex = backtrackIndex;
+        return false;
+    }
+
+    private boolean parseBufferedReader() throws SyntaxErrorException {
+        int backtrackIndex = currentTokenIndex;
+
+        if (match("BufferedReader") &&
+                optionalWhitespace() &&
+                parseVariable() &&
+                optionalWhitespace() &&
+                match("=") &&
+                optionalWhitespace() &&
+                match("new") &&
+                optionalWhitespace() &&
+                match("BufferedReader") &&
+                optionalWhitespace() &&
+                match("(") &&
+                optionalWhitespace() &&
+                match("new") &&
+                optionalWhitespace() &&
+                match("InputStreamReader") &&
+                optionalWhitespace() &&
+                match("(") &&
+                optionalWhitespace() &&
+                matchMultiWord("System.in", true) &&
+                optionalWhitespace() &&
+                match(")") &&
+                optionalWhitespace() &&
+                match(")") &&
+                optionalWhitespace() &&
+                match(";")) {
+            return true;
+        }
+
+        currentTokenIndex = backtrackIndex;
+        return false;
+    }
+
+    public String parseStatement() throws SyntaxErrorException {
+        try {
+            return parseInputStatement();
+        } catch (SyntaxErrorException e) {
+            // If it's not an input statement, try parsing it as an output statement
+            return parseOutputStatement();
         }
     }
 
@@ -162,28 +235,64 @@ public class Parser {
 
     private boolean matchMultiWord(String expectedValue, boolean consume) {
         String[] words = expectedValue.split("\\.");
-        int originalIndex = currentTokenIndex; // Store the original index
+        int originalIndex = currentTokenIndex;
 
-        for (String word : words) {
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
             Tokenizer.Token currentToken = getCurrentToken();
             if (currentToken == null || !currentToken.value.equals(word)) {
-                currentTokenIndex = originalIndex; // Reset the index if a word doesn't match
+                currentTokenIndex = originalIndex;
                 return false;
             }
-            consumeToken(); // Move to the next token for each word
+            consumeToken();
 
-            // Check for dots between words, but don't consume the final word's dot
-            if (word != words[words.length - 1]) {
+            if (i < words.length - 1) {
                 currentToken = getCurrentToken();
                 if (currentToken == null || !currentToken.value.equals(".")) {
                     currentTokenIndex = originalIndex;
                     return false;
                 }
-                consumeToken(); // Consume the dot
+                consumeToken();
             }
         }
 
         return true;
+    }
+
+    private String reconstructStatement(int startIndex, int endIndex) {
+        StringBuilder statement = new StringBuilder();
+        boolean lastWasDot = false;
+        boolean lastWasOpenParen = false;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            Tokenizer.Token token = tokens.get(i);
+            String tokenValue = token.value;
+
+            if (token.type == Tokenizer.TokenType.WHITESPACE) {
+                if (!lastWasDot && !lastWasOpenParen) {
+                    statement.append(" ");
+                }
+            } else {
+                if (tokenValue.equals(".")) {
+                    statement.append(".");
+                    lastWasDot = true;
+                    lastWasOpenParen = false;
+                } else if (tokenValue.equals("(")) {
+                    statement.append("(");
+                    lastWasDot = false;
+                    lastWasOpenParen = true;
+                } else {
+                    if (i > startIndex && !lastWasDot && !lastWasOpenParen && !tokenValue.equals(")")
+                            && !tokenValue.equals(";")) {
+                        statement.append(" ");
+                    }
+                    statement.append(tokenValue);
+                    lastWasDot = false;
+                    lastWasOpenParen = false;
+                }
+            }
+        }
+        return statement.toString().trim();
     }
 
     // Helper function to handle optional whitespace
@@ -196,14 +305,15 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        String code = "Scanner variable = new Scanner(System.in);";
+        String code = "Scanner scanner = new Scanner(System.in);";
         Tokenizer tokenizer = new Tokenizer();
         List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
 
         Parser parser = new Parser(tokens);
         try {
-            parser.parseInputStatement();
+            String parsedStatement = parser.parseStatement();
             System.out.println("Parsing successful!");
+            System.out.println("Parsed statement: " + parsedStatement);
         } catch (SyntaxErrorException e) {
             System.err.println(e.getMessage());
         }

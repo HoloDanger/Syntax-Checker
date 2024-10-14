@@ -59,63 +59,54 @@ public class Tokenizer {
             String tokenValue = matcher.group();
             TokenType tokenType = determineTokenType(matcher);
 
-            if (tokenType == null && tokenValue.matches(WHITESPACE)) {
-                // Ignore whitespace
+            if (tokenType == TokenType.WHITESPACE) {
+                // Update line and column numbers for whitespace
+                for (char c : tokenValue.toCharArray()) {
+                    if (c == '\n') {
+                        lineNumber++;
+                        columnNumber = 1;
+                    } else {
+                        columnNumber++;
+                    }
+                }
                 continue;
-            }
-
-            // Check for null pointer exception
-            if (tokenValue == null) {
-                throw new NullPointerException("Token value is null!");
-            }
-
-            // Check for unterminated string literals
-            if (tokenType == TokenType.STRING_LITERAL && !tokenValue.startsWith("\"") && !tokenValue.endsWith("\"")) {
-                throw new LexicalException("Unterminated string literal", lineNumber, columnNumber);
             }
 
             tokens.add(new Token(tokenType, tokenValue, lineNumber, columnNumber));
 
             // Update column count
             columnNumber += tokenValue.length();
-            if (tokenValue.contains("\n")) {
-                lineNumber++;
-                columnNumber = 1; // Reset column for the new line
-            }
         }
 
         return tokens;
     }
 
     private TokenType determineTokenType(Matcher matcher) {
-        if (matcher.group(1) != null) {
+        if (matcher.group(1) != null)
             return TokenType.KEYWORD;
-        } else if (matcher.group(2) != null) {
+        if (matcher.group(2) != null)
             return TokenType.IO_CLASS;
-        } else if (matcher.group(3) != null) {
+        if (matcher.group(3) != null)
             return TokenType.IO_METHOD;
-        } else if (matcher.group(4) != null) {
+        if (matcher.group(4) != null)
             return TokenType.BOOLEAN_LITERAL;
-        } else if (matcher.group(5) != null) {
+        if (matcher.group(5) != null)
             return TokenType.IDENTIFIER;
-        } else if (matcher.group(6) != null) {
+        if (matcher.group(6) != null)
             return TokenType.OPERATOR;
-        } else if (matcher.group(7) != null) {
+        if (matcher.group(7) != null)
             return TokenType.STRING_LITERAL;
-        } else if (matcher.group(8) != null) {
+        if (matcher.group(8) != null)
             return TokenType.FLOAT_LITERAL;
-        } else if (matcher.group(9) != null) {
+        if (matcher.group(9) != null)
             return TokenType.INTEGER_LITERAL;
-        } else if (matcher.group(10) != null) {
-            return TokenType.INTEGER_LITERAL;
-        } else if (matcher.group(11) != null) {
-            // Ignore whitespace
-            return null;
-        } else if (matcher.group(12) != null) {
+        if (matcher.group(10) != null)
+            return TokenType.CHAR_LITERAL;
+        if (matcher.group(11) != null)
+            return TokenType.WHITESPACE; // Change this line
+        if (matcher.group(12) != null)
             return TokenType.SEMICOLON;
-        } else {
-            return null;
-        }
+        return null;
     }
 
     // Custom exception class for lexical errors
@@ -126,7 +117,7 @@ public class Tokenizer {
     }
 
     public static void main(String[] args) {
-        String code = "if (x < 10) { System.out.println(\"Hello, World!\"); }";
+        String code = "System.out.println(\"Hello, World!\");";
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);
 
