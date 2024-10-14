@@ -261,38 +261,19 @@ public class Parser {
 
     private String reconstructStatement(int startIndex, int endIndex) {
         StringBuilder statement = new StringBuilder();
-        boolean lastWasDot = false;
-        boolean lastWasOpenParen = false;
+        boolean firstToken = true;
 
         for (int i = startIndex; i < endIndex; i++) {
             Tokenizer.Token token = tokens.get(i);
-            String tokenValue = token.value;
-
-            if (token.type == Tokenizer.TokenType.WHITESPACE) {
-                if (!lastWasDot && !lastWasOpenParen) {
-                    statement.append(" ");
-                }
-            } else {
-                if (tokenValue.equals(".")) {
-                    statement.append(".");
-                    lastWasDot = true;
-                    lastWasOpenParen = false;
-                } else if (tokenValue.equals("(")) {
-                    statement.append("(");
-                    lastWasDot = false;
-                    lastWasOpenParen = true;
-                } else {
-                    if (i > startIndex && !lastWasDot && !lastWasOpenParen && !tokenValue.equals(")")
-                            && !tokenValue.equals(";")) {
-                        statement.append(" ");
-                    }
-                    statement.append(tokenValue);
-                    lastWasDot = false;
-                    lastWasOpenParen = false;
-                }
+            if (!firstToken) {
+                statement.append(", ");
             }
+            firstToken = false;
+
+            // Append the token type and value in the specified format
+            statement.append(token.type.name() + ": \"" + token.value + "\"");
         }
-        return statement.toString().trim();
+        return "[" + statement.toString() + "]";
     }
 
     // Helper function to handle optional whitespace
@@ -305,21 +286,24 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        String code = "Scanner scanner = new Scanner(System.in);";
+        String code = "Scanner sc = new Scanner(System.in); System.out.println(\"Hello, World!\");";
         Tokenizer tokenizer = new Tokenizer();
         List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
 
         Parser parser = new Parser(tokens);
         try {
-            String parsedStatement = parser.parseStatement();
-            System.out.println("Parsing successful!");
-            System.out.println("Parsed statement: " + parsedStatement);
+            while (parser.getCurrentToken() != null) {
+                String parsedStatement = parser.parseStatement();
+                System.out.println("Parsed statement: " + parsedStatement);
+                System.out.println("Parsing successful!");
+            }
         } catch (SyntaxErrorException e) {
             System.err.println(e.getMessage());
         }
     }
 }
 
+// Exception class to handle syntax errors
 class SyntaxErrorException extends Exception {
     public SyntaxErrorException(String message) {
         super(message);

@@ -7,21 +7,24 @@ import java.util.regex.Pattern;
 
 public class Tokenizer {
     private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|double|do|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
-    private static final String OPERATORS = "[+\\-*/=<>!&\\|\\^%~\\?\\(\\)\\{\\}\\[\\]\\.]";
+    private static final String OPERATORS = "[+\\-*/=<>!&|^%~?]|\\(|\\)|\\{|\\}|\\[|\\]|\\.";
     private static final String IO_CLASS = "System|Scanner|BufferedReader|PrintWriter";
     private static final String IO_METHOD = "out|in|err|println|print|readLine|nextInt|nextDouble";
     private static final String IDENTIFIER = "[a-zA-Z_$][a-zA-Z0-9_$]*";
     private static final String STRING_LITERAL = "\"[^\"]*\"";
-    private static final String INTEGER_LITERAL = "[0-9]+";
-    private static final String FLOAT_LITERAL = "[0-9]+\\.[0-9]+";
-    private static final String BOOLEAN_LITERAL = "true|false";
+    private static final String INTEGER_LITERAL = "\\b[0-9]+\\b";
+    private static final String FLOAT_LITERAL = "\\b[0-9]+\\.[0-9]+\\b";
+    private static final String BOOLEAN_LITERAL = "\\btrue\\b|\\bfalse\\b";
     private static final String CHAR_LITERAL = "\\\\[nrtbf\\\"']";
     private static final String WHITESPACE = "\\s+";
-    private static final String SEMICOLON = "\\;";
+    private static final String SEMICOLON = ";";
+    private static final String ALL_TOKENS = "(" + KEYWORDS + ")|(" + IO_CLASS + ")|(" + IO_METHOD + ")|("
+            + BOOLEAN_LITERAL + ")|(" + IDENTIFIER + ")|(" + OPERATORS + ")|(" + STRING_LITERAL + ")|(" + FLOAT_LITERAL
+            + ")|(" + INTEGER_LITERAL + ")|(" + CHAR_LITERAL + ")|(" + WHITESPACE + ")|(" + SEMICOLON + ")|(.+)";
 
     public enum TokenType {
-        KEYWORD, IO_CLASS, IO_METHOD, IDENTIFIER, OPERATOR, STRING_LITERAL, INTEGER_LITERAL, FLOAT_LITERAL,
-        BOOLEAN_LITERAL, CHAR_LITERAL, WHITESPACE, SEMICOLON
+        KEYWORD, IO_CLASS, IO_METHOD, BOOLEAN_LITERAL, IDENTIFIER, OPERATOR, STRING_LITERAL, FLOAT_LITERAL,
+        INTEGER_LITERAL, CHAR_LITERAL, WHITESPACE, SEMICOLON, UNKNOWN, NEWLINE
     }
 
     public static class Token {
@@ -39,18 +42,15 @@ public class Tokenizer {
 
         @Override
         public String toString() {
-            return "Token{" + "type=" + type + ", value ='" + value + '\'' + '}';
+            return "Token{" + "type=" + type + ", value ='" + value + '\'' + ", line=" + line + ", column=" + column
+                    + '}';
         }
     }
 
     public List<Token> tokenize(String code) {
-        List<Token> tokens = new ArrayList<>();
-        Pattern pattern = Pattern.compile(
-                "(" + KEYWORDS + ")|(" + IO_CLASS + ")|(" + IO_METHOD + ")|(" + BOOLEAN_LITERAL + ")|("
-                        + IDENTIFIER + ")|(" + OPERATORS + ")|(" + STRING_LITERAL + ")|("
-                        + FLOAT_LITERAL + ")|(" + INTEGER_LITERAL + ")|(" + CHAR_LITERAL + ")|(" + WHITESPACE + ")|("
-                        + SEMICOLON + ")|(.)");
-        Matcher matcher = pattern.matcher(code);
+        List<Token> tokens = new ArrayList<>(); // List to hold tokens
+        Pattern pattern = Pattern.compile(ALL_TOKENS); // Compile regex pattern for all tokens
+        Matcher matcher = pattern.matcher(code); // Create matcher for input code
 
         int lineNumber = 1;
         int columnNumber = 1;
@@ -63,6 +63,7 @@ public class Tokenizer {
                 // Update line and column numbers for whitespace
                 for (char c : tokenValue.toCharArray()) {
                     if (c == '\n') {
+                        tokens.add(new Token(TokenType.NEWLINE, "\\n", lineNumber, columnNumber));
                         lineNumber++;
                         columnNumber = 1;
                     } else {
@@ -72,6 +73,10 @@ public class Tokenizer {
                 continue;
             }
 
+            // Handle unknown tokens gracefully
+            if (tokenType == null) {
+                throw new LexicalException("Unrecognized token '" + tokenValue + "'", lineNumber, columnNumber);
+            }
             tokens.add(new Token(tokenType, tokenValue, lineNumber, columnNumber));
 
             // Update column count
@@ -82,31 +87,12 @@ public class Tokenizer {
     }
 
     private TokenType determineTokenType(Matcher matcher) {
-        if (matcher.group(1) != null)
-            return TokenType.KEYWORD;
-        if (matcher.group(2) != null)
-            return TokenType.IO_CLASS;
-        if (matcher.group(3) != null)
-            return TokenType.IO_METHOD;
-        if (matcher.group(4) != null)
-            return TokenType.BOOLEAN_LITERAL;
-        if (matcher.group(5) != null)
-            return TokenType.IDENTIFIER;
-        if (matcher.group(6) != null)
-            return TokenType.OPERATOR;
-        if (matcher.group(7) != null)
-            return TokenType.STRING_LITERAL;
-        if (matcher.group(8) != null)
-            return TokenType.FLOAT_LITERAL;
-        if (matcher.group(9) != null)
-            return TokenType.INTEGER_LITERAL;
-        if (matcher.group(10) != null)
-            return TokenType.CHAR_LITERAL;
-        if (matcher.group(11) != null)
-            return TokenType.WHITESPACE; // Change this line
-        if (matcher.group(12) != null)
-            return TokenType.SEMICOLON;
-        return null;
+        for (int i = 1; i <= matcher.groupCount(); i++) {
+            if (matcher.group(i) != null) {
+                return TokenType.values()[i - 1];
+            }
+        }
+        return TokenType.UNKNOWN;
     }
 
     // Custom exception class for lexical errors
@@ -122,6 +108,15 @@ public class Tokenizer {
         List<Token> tokens = tokenizer.tokenize(code);
 
         for (Token token : tokens) {
+            System.out.println(token);
+        }
+
+        String testCode = "Scanner sc = new Scanner(System.in);\n" +
+                "int num = sc.nextInt();\n" +
+                "System.out.println(\"Number: \" + num);";
+        System.out.println("\nTesting additional code:\n");
+        List<Token> additionalTokens = tokenizer.tokenize(testCode);
+        for (Token token : additionalTokens) {
             System.out.println(token);
         }
     }
