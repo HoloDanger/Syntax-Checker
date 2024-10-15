@@ -42,6 +42,7 @@ public class Tokenizer {
         }
 
         @Override
+        // Function to convert to string
         public String toString() {
             return String.format("Type: %-20s | Value: %-15s | Line: %-3d | Column: %-3d",
                     type, value, line, column);
