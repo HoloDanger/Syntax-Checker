@@ -278,6 +278,22 @@ public class Parser {
         }
     }
 
+    public void parseAllStatements() throws SyntaxErrorException {
+        while (currentTokenIndex < tokens.size()) {
+            optionalWhitespace(); // Consume whitespace/newlines before attempting to parse
+
+            if (currentTokenIndex < tokens.size()) { // Check if there are more tokens
+                try {
+                    String parsedStatement = parseStatement(); // Parse a single statement
+                    System.out.println("\n" + parsedStatement); // Print the parsed statement
+                } catch (SyntaxErrorException e) {
+                    System.err.println(e.getMessage());
+                    consumeToken(); // Move to the next token to continue parsing
+                }
+            }
+        }
+    }
+
     private boolean match(String expectedValue) {
         Tokenizer.Token currentToken = getCurrentToken();
         if (currentToken != null && currentToken.value.equals(expectedValue)) {
@@ -339,8 +355,8 @@ public class Parser {
     public static void main(String[] args) {
         String code = """
                 System.out.print("");
+                System.out.println("");
                 """;
-        ;
         Tokenizer tokenizer = new Tokenizer();
         try {
             List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
@@ -353,8 +369,7 @@ public class Parser {
             }
 
             Parser parser = new Parser(tokens);
-            String parsedStatement = parser.parseStatement();
-            System.out.println("\n" + parsedStatement);
+            parser.parseAllStatements();
             System.out.println("Parsing successful!");
         } catch (Tokenizer.LexicalException e) {
             System.err.println(e.getMessage());
