@@ -9,7 +9,7 @@ public class Tokenizer {
     private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|double|do|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
     private static final String OPERATORS = "\\+|\\-|\\*|\\/|=|<=|>=|!=|==|<|>|!|&|\\||\\^|%|~|\\?";
     private static final String SEPARATORS = "[(){}\\[\\],.;]";
-    private static final String IO_CLASS = "System|Scanner|BufferedReader|PrintWriter";
+    private static final String IO_CLASS = "System|Scanner|BufferedReader|InputStreamReader|InputStream";
     private static final String IO_METHOD = "out|in|err|println|print|readLine|nextInt|nextDouble";
     private static final String IDENTIFIER = "[a-zA-Z_$][a-zA-Z0-9_$]*";
     private static final String STRING_LITERAL = "\"[^\"]*\"|'[^']'";
@@ -133,7 +133,7 @@ public class Tokenizer {
 
     public static void main(String[] args) {
         String code = """
-                System.out.print('')
+                BufferedReader variableName = new BufferedReader(new InputStreamReader(System.in));
                 """;
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);

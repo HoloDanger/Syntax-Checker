@@ -368,7 +368,7 @@ public class Parser {
     // Main Method
     public static void main(String[] args) {
         String code = """
-                System.out.println('a');
+                BufferedReader variableName = new BufferedReader(new InputStreamReader(System.in));
                 """;
         Tokenizer tokenizer = new Tokenizer();
         try {
