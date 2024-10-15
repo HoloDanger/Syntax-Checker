@@ -23,14 +23,29 @@ public class Parser {
         currentTokenIndex++;
     }
 
-    private void error(String message) throws SyntaxErrorException {
+    private String generateErrorMessage(String context, String message) {
         Tokenizer.Token token = getCurrentToken();
+        StringBuilder errorMessage = new StringBuilder("Syntax error");
+
         if (token != null) {
-            throw new SyntaxErrorException(
-                    "Syntax error at line " + token.line + " (column " + token.column + "): " + message);
+            errorMessage.append(" at line ").append(token.line)
+                    .append(" (column ").append(token.column).append("): ")
+                    .append(message).append(" (Found: '").append(token.value).append("')");
         } else {
-            throw new SyntaxErrorException("Syntax error: " + message);
+            errorMessage.append(": ").append(message);
         }
+
+        // Include the context in the error message if needed
+        if (context != null) {
+            errorMessage.append(" [Context: ").append(context).append("]");
+        }
+
+        return errorMessage.toString();
+    }
+
+    private void error(String message) throws SyntaxErrorException {
+        String errorMessage = generateErrorMessage(null, message);
+        throw new SyntaxErrorException(errorMessage);
     }
 
     // Parsing methods for output statements
@@ -48,11 +63,23 @@ public class Parser {
     }
 
     private void parsePrintStatement() throws SyntaxErrorException {
-        if (optionalWhitespace() && match("(") && optionalWhitespace()
-                && parseExpression()
-                && optionalWhitespace()
-                && match(")") && match(";")) {
-            // Successful parsing of print statement
+        if (optionalWhitespace() && match("(")) {
+            // Allow for an optional expression
+            if (!parseExpression() && !optionalWhitespace()) {
+                // Allow empty parentheses, if there are no terms
+                if (!match(")")) {
+                    error("Expected closing parenthesis after expression");
+                }
+            } else {
+                optionalWhitespace(); // Consume whitespace after expression
+                if (!match(")")) {
+                    error("Expected closing parenthesis after expression");
+                }
+            }
+            optionalWhitespace(); // Consume whitespace before semicolon
+            if (!match(";")) {
+                error("Expected semicolon at the end of print statement");
+            }
         } else {
             error("Invalid print statement");
         }
@@ -65,16 +92,13 @@ public class Parser {
         if (!match("(")) {
             error("Expected opening parenthesis after 'System.out.println'");
         }
-        if (!optionalWhitespace()) {
-            error("Expected whitespace or expression after opening parenthesis");
+
+        // Allow for an optional expression in println
+        if (!parseExpression() && !optionalWhitespace()) {
+            error("Expected a valid expression or nothing inside println statement");
         }
-        if (!parseExpression()) {
-            error("Expected valid expression inside println statement");
-        }
-        if (!optionalWhitespace()) {
-            error("Expected whitespace after expression");
-        }
-        if (!match(")")) {
+
+        if (!optionalWhitespace() || !match(")")) {
             error("Expected closing parenthesis after expression");
         }
         if (!match(";")) {
@@ -112,7 +136,7 @@ public class Parser {
 
     private boolean parseExpression() throws SyntaxErrorException {
         if (!parseTerm()) {
-            error("Expected a valid term in the expression");
+            return false;
         }
         return parseExpressionTail();
     }
@@ -145,6 +169,12 @@ public class Parser {
     }
 
     private boolean parseTerm() throws SyntaxErrorException {
+        Tokenizer.Token currentToken = getCurrentToken(); // Get the current token once
+        if (currentToken == null) {
+            return false; // If no current token, cannot parse a term
+        }
+
+        // Now check the type of the current token
         if (parseStringLiteral() || parseBooleanLiteral() || parseVariable() || parseNumericLiteral()
                 || (match("(") && parseExpression() && match(")"))) {
             return true;
@@ -235,30 +265,17 @@ public class Parser {
     }
 
     public String parseStatement() throws SyntaxErrorException {
-        String parsedStatement = null;
-
-        // Try parsing output statement first
         try {
-            parsedStatement = parseOutputStatement(); // Attempt to parse output statement
+            return parseOutputStatement();
         } catch (SyntaxErrorException e) {
-            // Do nothing, just try the next option
-        }
-
-        // If output statement parsing fails, try parsing input statement
-        if (parsedStatement == null) {
+            // If output statement parsing fails, try input statement
             try {
-                parsedStatement = parseInputStatement(); // Attempt to parse input statement
-            } catch (SyntaxErrorException e) {
-                // Do nothing, will handle later if both fail
+                return parseInputStatement();
+            } catch (SyntaxErrorException ignored) {
+                // If both fail, throw the original error from output statement
+                throw e;
             }
         }
-
-        // If neither parsing attempt succeeded, report an error
-        if (parsedStatement == null) {
-            error("Invalid statement: unable to parse input or output statement");
-        }
-
-        return parsedStatement; // Return the successfully parsed statement
     }
 
     private boolean match(String expectedValue) {
@@ -320,7 +337,7 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        String code = "System.out.println(\"Hello, World!\");";
+        String code = "System.out.print()";
         Tokenizer tokenizer = new Tokenizer();
         List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
 
@@ -333,13 +350,9 @@ public class Parser {
 
         Parser parser = new Parser(tokens);
         try {
-            while (parser.getCurrentToken() != null) {
-                String parsedStatement = parser.parseStatement();
-                System.out.println("\n" + parsedStatement);
-                if (parser.getCurrentToken() != null) {
-                    System.out.println("Parsing successful!");
-                }
-            }
+            String parsedStatement = parser.parseStatement();
+            System.out.println("\n" + parsedStatement);
+            System.out.println("Parsing successful!");
         } catch (SyntaxErrorException e) {
             System.err.println(e.getMessage());
         }
