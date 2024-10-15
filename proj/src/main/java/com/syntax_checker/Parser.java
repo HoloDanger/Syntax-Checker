@@ -52,6 +52,7 @@ public class Parser {
     public String parseOutputStatement() throws SyntaxErrorException {
         int startIndex = currentTokenIndex;
         optionalWhitespace();
+
         if (matchMultiWord("System.out.print")) {
             parsePrintStatement();
         } else if (matchMultiWord("System.out.println")) {
@@ -59,50 +60,51 @@ public class Parser {
         } else {
             error("Expected 'System.out.print' or 'System.out.println'");
         }
+
         return reconstructStatement(startIndex, currentTokenIndex);
     }
 
     private void parsePrintStatement() throws SyntaxErrorException {
-        if (optionalWhitespace() && match("(")) {
-            // Allow for an optional expression
-            if (!parseExpression() && !optionalWhitespace()) {
-                // Allow empty parentheses, if there are no terms
-                if (!match(")")) {
-                    error("Expected closing parenthesis after expression");
-                }
-            } else {
-                optionalWhitespace(); // Consume whitespace after expression
-                if (!match(")")) {
-                    error("Expected closing parenthesis after expression");
-                }
-            }
-            optionalWhitespace(); // Consume whitespace before semicolon
-            if (!match(";")) {
-                error("Expected semicolon at the end of print statement");
-            }
-        } else {
-            error("Invalid print statement");
+        optionalWhitespace();
+        if (!match("(")) {
+            error("Expected opening parenthesis after 'print'");
+        }
+
+        parsePrintExpression();
+        optionalWhitespace();
+
+        if (!match(")")) {
+            error("Expected closing parenthesis after expression");
+        }
+
+        optionalWhitespace();
+        if (!match(";")) {
+            error("Expected semicolon at the end of print statement");
         }
     }
 
     private void parsePrintlnStatement() throws SyntaxErrorException {
-        if (!optionalWhitespace()) {
-            error("Expected whitespace after 'System.out.println'");
-        }
+        optionalWhitespace();
         if (!match("(")) {
-            error("Expected opening parenthesis after 'System.out.println'");
+            error("Expected opening parenthesis after 'println'");
         }
 
-        // Allow for an optional expression in println
-        if (!parseExpression() && !optionalWhitespace()) {
-            error("Expected a valid expression or nothing inside println statement");
-        }
+        parsePrintExpression();
+        optionalWhitespace();
 
-        if (!optionalWhitespace() || !match(")")) {
+        if (!match(")")) {
             error("Expected closing parenthesis after expression");
         }
+
+        optionalWhitespace();
         if (!match(";")) {
             error("Expected semicolon at the end of println statement");
+        }
+    }
+
+    private void parsePrintExpression() throws SyntaxErrorException {
+        if (!parseExpression() && !optionalWhitespace()) {
+            error("Expected a valid expression inside print statement");
         }
     }
 
@@ -194,11 +196,10 @@ public class Parser {
         int startIndex = currentTokenIndex;
         optionalWhitespace();
 
-        if (parseScanner() || parseBufferedReader()) {
-            // Successfully parsed input statement
-        } else {
+        if (!parseScanner() && !parseBufferedReader()) {
             error("Invalid input statement");
         }
+
         return reconstructStatement(startIndex, currentTokenIndex);
     }
 
@@ -279,7 +280,7 @@ public class Parser {
     }
 
     public void parseAllStatements() throws SyntaxErrorException {
-        boolean hasParsedStatement = false;
+        int totalParsedStatements = 0; // Counter for total parsed statements
 
         while (currentTokenIndex < tokens.size()) {
             optionalWhitespace(); // Consume whitespace/newlines before attempting to parse
@@ -287,17 +288,18 @@ public class Parser {
             if (currentTokenIndex < tokens.size()) { // Check if there are more tokens
                 try {
                     String parsedStatement = parseStatement(); // Parse a single statement
-                    System.out.println("\n" + parsedStatement); // Print the parsed statement
-                    hasParsedStatement = true;
+                    System.out.println("\nParsed statement successfully:\n" + parsedStatement); // Indicate success
+                    totalParsedStatements++; // Increment the counter for each successful parse
                 } catch (SyntaxErrorException e) {
-                    System.err.println(e.getMessage());
+                    System.err.println("Error: " + e.getMessage());
                     consumeToken(); // Move to the next token to continue parsing
                 }
             }
         }
 
-        if (hasParsedStatement) {
-            System.out.println("Parsing successful");
+        // Summary message reflecting the total number of parsed statements
+        if (totalParsedStatements > 0) {
+            System.out.println("Parsing successful. Total statements parsed: " + totalParsedStatements);
         } else {
             System.out.println("No valid statements parsed.");
         }
@@ -363,7 +365,9 @@ public class Parser {
 
     public static void main(String[] args) {
         String code = """
-                System.out.println("Hello, World!");
+                Scanner scanner = new Scanner(System.in);
+                System.out.println(num);
+                int num = scanner.nextInt();
                 """;
         Tokenizer tokenizer = new Tokenizer();
         try {
