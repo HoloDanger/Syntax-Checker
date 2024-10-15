@@ -19,36 +19,46 @@ public class Parser {
         return null;
     }
 
-    private void consumeToken() {
-        currentTokenIndex++;
-    }
+    // Public Parsing Methods
+    public void parseAllStatements() throws SyntaxErrorException {
+        boolean hasParsedStatement = false;
 
-    private String generateErrorMessage(String context, String message) {
-        Tokenizer.Token token = getCurrentToken();
-        StringBuilder errorMessage = new StringBuilder("Syntax error");
+        while (currentTokenIndex < tokens.size()) {
+            optionalWhitespace(); // Consume whitespace/newlines before attempting to parse
 
-        if (token != null) {
-            errorMessage.append(" at line ").append(token.line)
-                    .append(" (column ").append(token.column).append("): ")
-                    .append(message).append(" (Found: '").append(token.value).append("')");
+            if (currentTokenIndex < tokens.size()) { // Check if there are more tokens
+                try {
+                    String parsedStatement = parseStatement(); // Parse a single statement
+                    System.out.println("\n" + parsedStatement); // Print the parsed statement
+                    hasParsedStatement = true;
+                } catch (SyntaxErrorException e) {
+                    System.err.println(e.getMessage());
+                    consumeToken(); // Move to the next token to continue parsing
+                }
+            }
+        }
+
+        if (hasParsedStatement) {
+            System.out.println("Parsing successful");
         } else {
-            errorMessage.append(": ").append(message);
+            System.out.println("No valid statements parsed.");
         }
-
-        // Include the context in the error message if needed
-        if (context != null) {
-            errorMessage.append(" [Context: ").append(context).append("]");
-        }
-
-        return errorMessage.toString();
     }
 
-    private void error(String message) throws SyntaxErrorException {
-        String errorMessage = generateErrorMessage(null, message);
-        throw new SyntaxErrorException(errorMessage);
+    public String parseStatement() throws SyntaxErrorException {
+        try {
+            return parseOutputStatement();
+        } catch (SyntaxErrorException e) {
+            // If output statement parsing fails, try input statement
+            try {
+                return parseInputStatement();
+            } catch (SyntaxErrorException ignored) {
+                // If both fail, throw the original error from output statement
+                throw e;
+            }
+        }
     }
 
-    // Parsing methods for output statements
     public String parseOutputStatement() throws SyntaxErrorException {
         int startIndex = currentTokenIndex;
         optionalWhitespace();
@@ -62,6 +72,19 @@ public class Parser {
         return reconstructStatement(startIndex, currentTokenIndex);
     }
 
+    public String parseInputStatement() throws SyntaxErrorException {
+        int startIndex = currentTokenIndex;
+        optionalWhitespace();
+
+        if (parseScanner() || parseBufferedReader()) {
+            // Successfully parsed input statement
+        } else {
+            error("Invalid input statement");
+        }
+        return reconstructStatement(startIndex, currentTokenIndex);
+    }
+
+    // Output Statement Parsing Methods
     private void parsePrintStatement() throws SyntaxErrorException {
         if (optionalWhitespace() && match("(")) {
             // Allow for an optional expression
@@ -106,102 +129,7 @@ public class Parser {
         }
     }
 
-    private boolean parseStringLiteral() {
-        Tokenizer.Token currentToken = getCurrentToken();
-        if (currentToken != null && currentToken.type == Tokenizer.TokenType.STRING_LITERAL) {
-            consumeToken(); // Consume the whole string literal token
-            return true;
-        }
-        return false;
-    }
-
-    private boolean parseNumericLiteral() {
-        Tokenizer.Token currentToken = getCurrentToken();
-        if (currentToken != null && currentToken.type == Tokenizer.TokenType.INTEGER_LITERAL
-                || currentToken.type == Tokenizer.TokenType.FLOAT_LITERAL) {
-            consumeToken();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean parseVariable() {
-        Tokenizer.Token currentToken = getCurrentToken();
-        if (currentToken != null && currentToken.type == Tokenizer.TokenType.IDENTIFIER) {
-            consumeToken();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean parseExpression() throws SyntaxErrorException {
-        if (!parseTerm()) {
-            return false;
-        }
-        return parseExpressionTail();
-    }
-
-    private boolean parseExpressionTail() throws SyntaxErrorException {
-        while (true) {
-            Tokenizer.Token currentToken = getCurrentToken();
-            if (currentToken == null)
-                break;
-
-            if (isOperator(currentToken.value)) {
-                consumeToken();
-                if (!parseTerm()) {
-                    error("Expected a term after operator" + currentToken.value);
-                }
-            } else {
-                break; // No more operators
-            }
-        }
-        return true;
-    }
-
-    private boolean parseBooleanLiteral() {
-        Tokenizer.Token currentToken = getCurrentToken();
-        if (currentToken != null && currentToken.type == Tokenizer.TokenType.BOOLEAN_LITERAL) {
-            consumeToken();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean parseTerm() throws SyntaxErrorException {
-        Tokenizer.Token currentToken = getCurrentToken(); // Get the current token once
-        if (currentToken == null) {
-            return false; // If no current token, cannot parse a term
-        }
-
-        // Now check the type of the current token
-        if (parseStringLiteral() || parseBooleanLiteral() || parseVariable() || parseNumericLiteral()
-                || (match("(") && parseExpression() && match(")"))) {
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isOperator(String value) {
-        return "+".equals(value) || "-".equals(value) || "*".equals(value) || "/".equals(value) || "=".equals(value)
-                || "<".equals(value) || ">".equals(value) || "!".equals(value) || "&".equals(value)
-                || "|".equals(value) || "^".equals(value) || "%".equals(value) || "~".equals(value)
-                || "?".equals(value) || ">=".equals(value) || "<=".equals(value);
-    }
-
-    // Parsing methods for input statements
-    public String parseInputStatement() throws SyntaxErrorException {
-        int startIndex = currentTokenIndex;
-        optionalWhitespace();
-
-        if (parseScanner() || parseBufferedReader()) {
-            // Successfully parsed input statement
-        } else {
-            error("Invalid input statement");
-        }
-        return reconstructStatement(startIndex, currentTokenIndex);
-    }
-
+    // Input Statement Parsing Methods
     private boolean parseScanner() throws SyntaxErrorException {
         int backtrackIndex = currentTokenIndex;
 
@@ -264,43 +192,112 @@ public class Parser {
         return false;
     }
 
-    public String parseStatement() throws SyntaxErrorException {
-        try {
-            return parseOutputStatement();
-        } catch (SyntaxErrorException e) {
-            // If output statement parsing fails, try input statement
-            try {
-                return parseInputStatement();
-            } catch (SyntaxErrorException ignored) {
-                // If both fail, throw the original error from output statement
-                throw e;
-            }
+    // Expression Parsing Methods
+    private boolean parseExpression() throws SyntaxErrorException {
+        if (!parseTerm()) {
+            return false;
         }
+        return parseExpressionTail();
     }
 
-    public void parseAllStatements() throws SyntaxErrorException {
-        boolean hasParsedStatement = false;
+    private boolean parseExpressionTail() throws SyntaxErrorException {
+        while (true) {
+            Tokenizer.Token currentToken = getCurrentToken();
+            if (currentToken == null)
+                break;
 
-        while (currentTokenIndex < tokens.size()) {
-            optionalWhitespace(); // Consume whitespace/newlines before attempting to parse
-
-            if (currentTokenIndex < tokens.size()) { // Check if there are more tokens
-                try {
-                    String parsedStatement = parseStatement(); // Parse a single statement
-                    System.out.println("\n" + parsedStatement); // Print the parsed statement
-                    hasParsedStatement = true;
-                } catch (SyntaxErrorException e) {
-                    System.err.println(e.getMessage());
-                    consumeToken(); // Move to the next token to continue parsing
+            if (isOperator(currentToken.value)) {
+                consumeToken();
+                if (!parseTerm()) {
+                    error("Expected a term after operator" + currentToken.value);
                 }
+            } else {
+                break; // No more operators
             }
         }
+        return true;
+    }
 
-        if (hasParsedStatement) {
-            System.out.println("Parsing successful");
-        } else {
-            System.out.println("No valid statements parsed.");
+    private boolean parseTerm() throws SyntaxErrorException {
+        Tokenizer.Token currentToken = getCurrentToken(); // Get the current token once
+        if (currentToken == null) {
+            return false; // If no current token, cannot parse a term
         }
+
+        // Now check the type of the current token
+        if (parseStringLiteral() || parseBooleanLiteral() || parseVariable() || parseNumericLiteral()
+                || (match("(") && parseExpression() && match(")"))) {
+            return true;
+        }
+        return false;
+    }
+
+    // Literal Parsing Methods
+    private boolean parseStringLiteral() {
+        Tokenizer.Token currentToken = getCurrentToken();
+        if (currentToken != null && currentToken.type == Tokenizer.TokenType.STRING_LITERAL) {
+            consumeToken(); // Consume the whole string literal token
+            return true;
+        }
+        return false;
+    }
+
+    private boolean parseNumericLiteral() {
+        Tokenizer.Token currentToken = getCurrentToken();
+        if (currentToken != null && currentToken.type == Tokenizer.TokenType.INTEGER_LITERAL
+                || currentToken.type == Tokenizer.TokenType.FLOAT_LITERAL) {
+            consumeToken();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean parseVariable() {
+        Tokenizer.Token currentToken = getCurrentToken();
+        if (currentToken != null && currentToken.type == Tokenizer.TokenType.IDENTIFIER) {
+            consumeToken();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean parseBooleanLiteral() {
+        Tokenizer.Token currentToken = getCurrentToken();
+        if (currentToken != null && currentToken.type == Tokenizer.TokenType.BOOLEAN_LITERAL) {
+            consumeToken();
+            return true;
+        }
+        return false;
+    }
+
+    // Utility Methods
+    private String generateErrorMessage(String context, String message) {
+        Tokenizer.Token token = getCurrentToken();
+        StringBuilder errorMessage = new StringBuilder("Syntax error");
+
+        if (token != null) {
+            errorMessage.append(" at line ").append(token.line)
+                    .append(" (column ").append(token.column).append("): ")
+                    .append(message).append(" (Found: '").append(token.value).append("')");
+        } else {
+            errorMessage.append(": ").append(message);
+        }
+
+        // Include the context in the error message if needed
+        if (context != null) {
+            errorMessage.append(" [Context: ").append(context).append("]");
+        }
+
+        return errorMessage.toString();
+    }
+
+    private void error(String message) throws SyntaxErrorException {
+        String errorMessage = generateErrorMessage(null, message);
+        throw new SyntaxErrorException(errorMessage);
+    }
+
+    private void consumeToken() {
+        currentTokenIndex++;
     }
 
     private boolean match(String expectedValue) {
@@ -351,7 +348,6 @@ public class Parser {
         return statement.toString();
     }
 
-    // Helper function to handle optional whitespace
     private boolean optionalWhitespace() {
         while (getCurrentToken() != null &&
                 (getCurrentToken().type == Tokenizer.TokenType.WHITESPACE ||
@@ -361,9 +357,18 @@ public class Parser {
         return true;
     }
 
+    // Helper Functions
+    private boolean isOperator(String value) {
+        return "+".equals(value) || "-".equals(value) || "*".equals(value) || "/".equals(value) || "=".equals(value)
+                || "<".equals(value) || ">".equals(value) || "!".equals(value) || "&".equals(value)
+                || "|".equals(value) || "^".equals(value) || "%".equals(value) || "~".equals(value)
+                || "?".equals(value) || ">=".equals(value) || "<=".equals(value);
+    }
+
+    // Main Method
     public static void main(String[] args) {
         String code = """
-                System.out.println("Hello, World!");
+                System.out.println('a');
                 """;
         Tokenizer tokenizer = new Tokenizer();
         try {
