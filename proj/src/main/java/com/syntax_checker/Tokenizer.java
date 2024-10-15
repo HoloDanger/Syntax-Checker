@@ -78,7 +78,8 @@ public class Tokenizer {
 
             // Handle unknown tokens
             if (tokenType == TokenType.UNKNOWN || tokenValue.contains("#")) {
-                throw new LexicalException("Unrecognized token '" + tokenValue + "'", lineNumber, columnNumber);
+                String errorMessage = generateCustomErrorMessage(tokenValue, lineNumber, columnNumber, code);
+                throw new LexicalException(errorMessage, lineNumber, columnNumber);
             }
 
             tokens.add(new Token(tokenType, tokenValue, lineNumber, columnNumber));
@@ -98,52 +99,41 @@ public class Tokenizer {
         return TokenType.UNKNOWN;
     }
 
+    private String generateCustomErrorMessage(String invalidToken, int line, int column, String code) {
+        StringBuilder errorMessage = new StringBuilder();
+        errorMessage.append("\nUnrecognized token '").append(invalidToken).append("' at line ").append(line)
+                .append(", column ").append(column).append("\n");
+
+        // Add context to the error message
+        String[] lines = code.split("\n");
+        if (line <= lines.length) {
+            String errorLine = lines[line - 1];
+            errorMessage.append("Line ").append(line).append(": ").append(errorLine).append("\n");
+            errorMessage.append(" ".repeat(column + 6)).append("^\n");
+        }
+
+        errorMessage.append("Possible fixes:\n");
+        if (invalidToken.equals("'")) {
+            errorMessage.append("- Use double quotes for string literals: \"").append(invalidToken).append("\"\n");
+        } else {
+            errorMessage.append("- Check for typos in variable names or keywords\n");
+            errorMessage.append("- Ensure proper use of operators and separators\n");
+            errorMessage.append("- Verify that all string literals are properly closed\n");
+        }
+
+        return errorMessage.toString();
+    }
+
     // Custom exception class for lexical errors
     public static class LexicalException extends RuntimeException {
         public LexicalException(String message, int line, int column) {
-            super("Lexical error at line " + line + " (column " + column + "): " + message);
+            super(message);
         }
     }
 
     public static void main(String[] args) {
         String code = """
-                Scanner sc = new Scanner(System.in);
-                System.out.print("");
-                System.out.println("");
-                System.out.print(myVar);
-                System.out.println(myVar);
-                System.out.print(_identifier);
-                System.out.println(_identifier);
-                System.out.print($price);
-                System.out.println($price);
-                System.out.print(true);
-                System.out.println(true);
-                System.out.print(false);
-                System.out.println(false);
-                System.out.print('a');
-                System.out.println('a');
-                System.out.print(3.1415);
-                System.out.println(3.1415);
-                System.out.print(10);
-                System.out.println(10);
-                System.out.print("Sample");
-                System.out.println("Sample");
-                System.out.print(num + 5);
-                System.out.println(num + 5);
-                System.out.print(5 * 6);
-                System.out.println(5 * 6);
-                System.out.print(age >= 18);
-                System.out.println(age >= 18);
-                System.out.print(firstName + " " + lastName);
-                System.out.println(firstName + " " + lastName);
-                System.out.print(5 < 10);
-                System.out.println(5 < 10);
-                System.out.print("The answer is " + (x + y));
-                System.out.println("The answer is " + (x + y));
-                System.out.print("Value: " + (value / 2));
-                System.out.println("Value: " + (value / 2));
-                System.out.print("Average: " + (total / count));
-                System.out.println("Average: " + (total / count));
+                System.out.print('')
                 """;
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);

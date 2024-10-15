@@ -337,22 +337,27 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        String code = "System.out.print()";
+        String code = """
+                System.out.print("");
+                """;
+        ;
         Tokenizer tokenizer = new Tokenizer();
-        List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
-
-        // Print all tokens
-        for (int i = 0; i < tokens.size(); i++) {
-            Tokenizer.Token token = tokens.get(i);
-            System.out.printf("Token %d: Type=%s, Value='%s', Line=%d, Column=%d%n",
-                    i, token.type, token.value, token.line, token.column);
-        }
-
-        Parser parser = new Parser(tokens);
         try {
+            List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
+
+            // Print all tokens
+            for (int i = 0; i < tokens.size(); i++) {
+                Tokenizer.Token token = tokens.get(i);
+                System.out.printf("Token %d: Type=%s, Value='%s', Line=%d, Column=%d%n",
+                        i, token.type, token.value, token.line, token.column);
+            }
+
+            Parser parser = new Parser(tokens);
             String parsedStatement = parser.parseStatement();
             System.out.println("\n" + parsedStatement);
             System.out.println("Parsing successful!");
+        } catch (Tokenizer.LexicalException e) {
+            System.err.println(e.getMessage());
         } catch (SyntaxErrorException e) {
             System.err.println(e.getMessage());
         }
