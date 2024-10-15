@@ -52,9 +52,9 @@ public class Parser {
     public String parseOutputStatement() throws SyntaxErrorException {
         int startIndex = currentTokenIndex;
         optionalWhitespace();
-        if (matchMultiWord("System.out.print", true)) {
+        if (matchMultiWord("System.out.print")) {
             parsePrintStatement();
-        } else if (matchMultiWord("System.out.println", true)) {
+        } else if (matchMultiWord("System.out.println")) {
             parsePrintlnStatement();
         } else {
             error("Expected 'System.out.print' or 'System.out.println'");
@@ -217,7 +217,7 @@ public class Parser {
                 optionalWhitespace() &&
                 match("(") &&
                 optionalWhitespace() &&
-                (matchMultiWord("System.in", true) || parseVariable()) &&
+                (matchMultiWord("System.in") || parseVariable()) &&
                 optionalWhitespace() &&
                 match(")") &&
                 optionalWhitespace() &&
@@ -250,7 +250,7 @@ public class Parser {
                 optionalWhitespace() &&
                 match("(") &&
                 optionalWhitespace() &&
-                matchMultiWord("System.in", true) &&
+                matchMultiWord("System.in") &&
                 optionalWhitespace() &&
                 match(")") &&
                 optionalWhitespace() &&
@@ -279,6 +279,8 @@ public class Parser {
     }
 
     public void parseAllStatements() throws SyntaxErrorException {
+        boolean hasParsedStatement = false;
+
         while (currentTokenIndex < tokens.size()) {
             optionalWhitespace(); // Consume whitespace/newlines before attempting to parse
 
@@ -286,11 +288,18 @@ public class Parser {
                 try {
                     String parsedStatement = parseStatement(); // Parse a single statement
                     System.out.println("\n" + parsedStatement); // Print the parsed statement
+                    hasParsedStatement = true;
                 } catch (SyntaxErrorException e) {
                     System.err.println(e.getMessage());
                     consumeToken(); // Move to the next token to continue parsing
                 }
             }
+        }
+
+        if (hasParsedStatement) {
+            System.out.println("Parsing successful");
+        } else {
+            System.out.println("No valid statements parsed.");
         }
     }
 
@@ -303,29 +312,29 @@ public class Parser {
         return false;
     }
 
-    private boolean matchMultiWord(String expectedValue, boolean consume) {
+    private boolean matchMultiWord(String expectedValue) {
         String[] words = expectedValue.split("\\.");
-        int originalIndex = currentTokenIndex;
+        int lookaheadIndex = currentTokenIndex;
 
         for (int i = 0; i < words.length; i++) {
-            String word = words[i];
-            Tokenizer.Token currentToken = getCurrentToken();
-            if (currentToken == null || !currentToken.value.equals(word)) {
-                currentTokenIndex = originalIndex;
+            Tokenizer.Token currentToken = tokens.get(lookaheadIndex);
+
+            if (currentToken == null || !currentToken.value.equals(words[i])) {
                 return false;
             }
-            consumeToken();
+
+            lookaheadIndex++;
 
             if (i < words.length - 1) {
-                currentToken = getCurrentToken();
+                currentToken = tokens.get(lookaheadIndex);
                 if (currentToken == null || !currentToken.value.equals(".")) {
-                    currentTokenIndex = originalIndex;
                     return false;
                 }
-                consumeToken();
+                lookaheadIndex++;
             }
         }
 
+        currentTokenIndex = lookaheadIndex;
         return true;
     }
 
@@ -354,8 +363,7 @@ public class Parser {
 
     public static void main(String[] args) {
         String code = """
-                System.out.print("");
-                System.out.println("");
+                System.out.println("Hello, World!");
                 """;
         Tokenizer tokenizer = new Tokenizer();
         try {
@@ -370,7 +378,6 @@ public class Parser {
 
             Parser parser = new Parser(tokens);
             parser.parseAllStatements();
-            System.out.println("Parsing successful!");
         } catch (Tokenizer.LexicalException e) {
             System.err.println(e.getMessage());
         } catch (SyntaxErrorException e) {
