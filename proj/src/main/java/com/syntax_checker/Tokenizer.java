@@ -7,12 +7,12 @@ import java.util.regex.Pattern;
 
 public class Tokenizer {
     private static final String KEYWORDS = "abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|double|do|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while";
-    private static final String OPERATORS = "[+\\-*/=<>!&|^%~?]";
+    private static final String OPERATORS = "\\+|\\-|\\*|\\/|=|<=|>=|!=|==|<|>|!|&|\\||\\^|%|~|\\?";
     private static final String SEPARATORS = "[(){}\\[\\],.;]";
     private static final String IO_CLASS = "System|Scanner|BufferedReader|PrintWriter";
     private static final String IO_METHOD = "out|in|err|println|print|readLine|nextInt|nextDouble";
     private static final String IDENTIFIER = "[a-zA-Z_$][a-zA-Z0-9_$]*";
-    private static final String STRING_LITERAL = "\"[^\"]*\"";
+    private static final String STRING_LITERAL = "\"[^\"]*\"|'[^']'";
     private static final String INTEGER_LITERAL = "\\b[0-9]+\\b";
     private static final String FLOAT_LITERAL = "\\b[0-9]+\\.[0-9]+\\b";
     private static final String BOOLEAN_LITERAL = "\\btrue\\b|\\bfalse\\b";
@@ -105,7 +105,45 @@ public class Tokenizer {
     }
 
     public static void main(String[] args) {
-        String code = "System.out.println(\"Hello, World!\");";
+        String code = """
+                Scanner sc = new Scanner(System.in);
+                System.out.print("");
+                System.out.println("");
+                System.out.print(myVar);
+                System.out.println(myVar);
+                System.out.print(_identifier);
+                System.out.println(_identifier);
+                System.out.print($price);
+                System.out.println($price);
+                System.out.print(true);
+                System.out.println(true);
+                System.out.print(false);
+                System.out.println(false);
+                System.out.print('a');
+                System.out.println('a');
+                System.out.print(3.1415);
+                System.out.println(3.1415);
+                System.out.print(10);
+                System.out.println(10);
+                System.out.print("Sample");
+                System.out.println("Sample");
+                System.out.print(num + 5);
+                System.out.println(num + 5);
+                System.out.print(5 * 6);
+                System.out.println(5 * 6);
+                System.out.print(age >= 18);
+                System.out.println(age >= 18);
+                System.out.print(firstName + " " + lastName);
+                System.out.println(firstName + " " + lastName);
+                System.out.print(5 < 10);
+                System.out.println(5 < 10);
+                System.out.print("The answer is " + (x + y));
+                System.out.println("The answer is " + (x + y));
+                System.out.print("Value: " + (value / 2));
+                System.out.println("Value: " + (value / 2));
+                System.out.print("Average: " + (total / count));
+                System.out.println("Average: " + (total / count));
+                """;
         Tokenizer tokenizer = new Tokenizer();
         List<Token> tokens = tokenizer.tokenize(code);
 
