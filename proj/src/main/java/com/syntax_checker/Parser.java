@@ -235,15 +235,30 @@ public class Parser {
     }
 
     public String parseStatement() throws SyntaxErrorException {
+        String parsedStatement = null;
+
+        // Try parsing output statement first
         try {
-            return parseInputStatement();
+            parsedStatement = parseOutputStatement(); // Attempt to parse output statement
         } catch (SyntaxErrorException e) {
+            // Do nothing, just try the next option
+        }
+
+        // If output statement parsing fails, try parsing input statement
+        if (parsedStatement == null) {
             try {
-                return parseOutputStatement();
-            } catch (SyntaxErrorException e2) {
-                return "";
+                parsedStatement = parseInputStatement(); // Attempt to parse input statement
+            } catch (SyntaxErrorException e) {
+                // Do nothing, will handle later if both fail
             }
         }
+
+        // If neither parsing attempt succeeded, report an error
+        if (parsedStatement == null) {
+            error("Invalid statement: unable to parse input or output statement");
+        }
+
+        return parsedStatement; // Return the successfully parsed statement
     }
 
     private boolean match(String expectedValue) {
@@ -305,7 +320,7 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        String code = "";
+        String code = "System.out.println(\"Hello, World!\");";
         Tokenizer tokenizer = new Tokenizer();
         List<Tokenizer.Token> tokens = tokenizer.tokenize(code);
 
